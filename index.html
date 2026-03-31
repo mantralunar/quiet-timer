@@ -21,16 +21,11 @@ body {
   font-family: system-ui, sans-serif;
   background: #0f172a;
   color: #e2e8f0;
-
   display: flex;
   justify-content: center;
   align-items: center;
-
   min-height: 100vh;
-
-  /* 👇 subtle upward bias */
   padding: 2vh 1rem 1rem;
-
   font-size: clamp(16px, 1.2vw, 18px);
 }
 
@@ -38,11 +33,9 @@ body {
   width: min(92vw, 600px);
   max-width: 100%;
   max-height: 95vh;
-
   display: flex;
   flex-direction: column;
   justify-content: center;
-
   padding: clamp(1.5rem, 3vw, 2.5rem);
   border-radius: 24px;
   text-align: center;
@@ -143,6 +136,7 @@ input[type="range"]::-webkit-slider-runnable-track {
   border-radius: 999px;
   overflow: hidden;
   margin-top: 0.5rem;
+  position: relative;
 }
 
 .meter-fill {
@@ -151,7 +145,14 @@ input[type="range"]::-webkit-slider-runnable-track {
   transition: width 0.1s, background 0.2s;
 }
 
-/* Glow animation */
+.meter-limit {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #f87171;
+}
+
 @keyframes glow {
   0% {
     stroke: #ef4444;
@@ -167,9 +168,7 @@ input[type="range"]::-webkit-slider-runnable-track {
   }
 }
 
-/* Mobile tweaks */
 @media (max-width: 600px) {
-
   .circle {
     width: 65vw;
     height: 65vw;
@@ -209,40 +208,41 @@ input[type="range"]::-webkit-slider-runnable-track {
 
 <div class="card">
 
-<div class="circle">
-<svg viewBox="0 0 200 200">
-<circle cx="100" cy="100" r="88" stroke="#1f2937" stroke-width="10" fill="none"/>
-<circle id="progress"
-  cx="100" cy="100" r="88"
-  stroke="#22c55e"
-  stroke-width="10"
-  fill="none"
-  stroke-linecap="round"
-  stroke-dasharray="552"
-  stroke-dashoffset="0"/>
-</svg>
-<div class="time" id="time">15:00</div>
-</div>
+  <div class="circle">
+    <svg viewBox="0 0 200 200">
+      <circle cx="100" cy="100" r="88" stroke="#1f2937" stroke-width="10" fill="none"/>
+      <circle id="progress"
+        cx="100" cy="100" r="88"
+        stroke="#22c55e"
+        stroke-width="10"
+        fill="none"
+        stroke-linecap="round"
+        stroke-dasharray="552.92"
+        stroke-dashoffset="0"/>
+    </svg>
+    <div class="time" id="time">15:00</div>
+  </div>
 
-<div class="status" id="status">Ready</div>
+  <div class="status" id="status">Ready</div>
 
-<div class="buttons">
-<button id="main">Start</button>
-<button id="reset" class="secondary" disabled>Reset</button>
-</div>
+  <div class="buttons">
+    <button id="main">Start</button>
+    <button id="reset" class="secondary" disabled>Reset</button>
+  </div>
 
-<div class="control">
-<label>Duration (minutes)</label>
-<input type="number" id="duration" value="15">
-</div>
+  <div class="control">
+    <label for="duration">Duration (minutes)</label>
+    <input type="number" id="duration" value="15" min="1">
+  </div>
 
-<div class="control">
-<label>Maximum noise level</label>
-<div class="meter">
-  <div id="meter" class="meter-fill"></div>
-</div>
-<input id="threshold" type="range" min="0" max="1" step="0.01" value="0.3">
-</div>
+  <div class="control">
+    <label for="threshold">Maximum noise level</label>
+    <div class="meter">
+      <div id="meter" class="meter-fill"></div>
+      <div id="meterLimit" class="meter-limit"></div>
+    </div>
+    <input id="threshold" type="range" min="0" max="1" step="0.01" value="0.3">
+  </div>
 
 </div>
 
@@ -273,15 +273,16 @@ const resetBtn = document.getElementById("reset");
 const timeEl = document.getElementById("time");
 const statusEl = document.getElementById("status");
 const meterEl = document.getElementById("meter");
+const meterLimit = document.getElementById("meterLimit");
 const progressEl = document.getElementById("progress");
 
 const thresholdEl = document.getElementById("threshold");
 const durationEl = document.getElementById("duration");
 
-function formatTime(s){
-  const m = Math.floor(s/60);
-  const sec = Math.floor(s%60);
-  return `${m.toString().padStart(2,"0")}:${sec.toString().padStart(2,"0")}`;
+function formatTime(s) {
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return `${m.toString().padStart(2, "0")}:${sec.toString().padStart(2, "0")}`;
 }
 
 function updateButtons() {
@@ -303,111 +304,139 @@ function updateCircle() {
     circumference * (1 - timeLeft / totalTime);
 }
 
-function getVolume(){
+function getVolume() {
   analyser.getFloatTimeDomainData(dataArray);
-  let sum=0;
-  for(let i=0;i<dataArray.length;i++){
-    sum+=dataArray[i]*dataArray[i];
+  let sum = 0;
+  for (let i = 0; i < dataArray.length; i++) {
+    sum += dataArray[i] * dataArray[i];
   }
-  const rms = Math.sqrt(sum/dataArray.length);
-  smoothedVolume = smoothedVolume*0.9 + rms*0.1;
+  const rms = Math.sqrt(sum / dataArray.length);
+  smoothedVolume = smoothedVolume * 0.9 + rms * 0.1;
   return smoothedVolume;
 }
 
-function startWaitingAlert(){
+function cancelWaitingAlert() {
+  waitingAlertActive = false;
+
+  if (waitingAlertTimeout) {
+    clearTimeout(waitingAlertTimeout);
+    waitingAlertTimeout = null;
+  }
+
+  progressEl.style.animation = "none";
+  progressEl.style.filter = "";
+  progressEl.style.transition = "";
+}
+
+function startWaitingAlert() {
   if (waitingAlertActive) return;
 
   waitingAlertActive = true;
   progressEl.style.animation = "none";
+  progressEl.style.filter = "";
   progressEl.style.stroke = "#ef4444";
-
   progressEl.style.transition = "stroke-dashoffset 0.4s ease-out";
   progressEl.style.strokeDashoffset = 0;
 
-  waitingAlertTimeout = setTimeout(()=>{
+  waitingAlertTimeout = setTimeout(() => {
+    if (!waitingAlertActive) return;
     progressEl.style.transition = "";
     progressEl.style.animation = "glow 1s infinite";
-  },400);
+  }, 400);
 }
 
-function setRingReady(){
-  if (waitingAlertActive){
+function setRingReady() {
+  if (waitingAlertActive) {
+    if (waitingAlertTimeout) {
+      clearTimeout(waitingAlertTimeout);
+      waitingAlertTimeout = null;
+    }
+
     progressEl.style.animation = "none";
     progressEl.style.filter = "";
     progressEl.style.stroke = "#22c55e";
-
     progressEl.style.transition = "stroke-dashoffset 0.4s ease-out";
     progressEl.style.strokeDashoffset =
       circumference * (1 - timeLeft / totalTime);
 
-    setTimeout(()=>{
+    setTimeout(() => {
       progressEl.style.transition = "";
       waitingAlertActive = false;
-    },400);
+    }, 400);
   } else {
     progressEl.style.stroke = "#22c55e";
+    progressEl.style.filter = "";
+    progressEl.style.animation = "none";
     updateCircle();
   }
 }
 
-function tick(now){
-  if(!lastTick) lastTick=now;
-  const dt=(now-lastTick)/1000;
-  lastTick=now;
+function setRingPaused() {
+  cancelWaitingAlert();
+  progressEl.style.stroke = "#f59e0b";
+  updateCircle();
+}
 
-  if(!analyser){ requestAnimationFrame(tick); return; }
+function setRingFinished() {
+  cancelWaitingAlert();
+  progressEl.style.stroke = "#3b82f6";
+  updateCircle();
+}
 
-  const vol=getVolume();
-  const norm=Math.min((vol / MAX_VOLUME) ** 0.8,1);
-  const thr=parseFloat(thresholdEl.value);
+function tick(now) {
+  if (!lastTick) lastTick = now;
+  const dt = (now - lastTick) / 1000;
+  lastTick = now;
 
-  meterEl.style.width=(norm*100)+"%";
-  meterEl.style.background=norm<thr?"#22c55e":"#ef4444";
+  if (!analyser) {
+    requestAnimationFrame(tick);
+    return;
+  }
 
-  const isQuiet=norm<thr;
+  const vol = getVolume();
+  const norm = Math.min((vol / MAX_VOLUME) ** 0.8, 1);
+  const thr = parseFloat(thresholdEl.value);
+  const isQuiet = norm < thr;
 
-  if (!isActive){
-    running=false;
-    statusEl.textContent="Ready";
+  meterEl.style.width = (norm * 100) + "%";
+  meterEl.style.background = norm < thr ? "#22c55e" : "#ef4444";
+  meterLimit.style.left = (thr * 100) + "%";
+
+  if (!isActive) {
+    running = false;
+    statusEl.textContent = "Ready";
     setRingReady();
 
-  } else if (manuallyPaused){
-    running=false;
-    statusEl.textContent="Paused";
-
-    waitingAlertActive = false;
-    progressEl.style.animation = "none";
-    progressEl.style.filter = "";
-    progressEl.style.transition = "";
-    progressEl.style.stroke = "#f59e0b";
-
-    updateCircle();
+  } else if (manuallyPaused) {
+    running = false;
+    statusEl.textContent = "Paused";
+    setRingPaused();
 
   } else {
-    if (!isQuiet) pauseUntil=now+3000;
-    running=(now>=pauseUntil && isQuiet);
+    if (!isQuiet) pauseUntil = now + 3000;
+    running = (now >= pauseUntil && isQuiet);
 
-    if (running){
-      statusEl.textContent="Running";
+    if (running) {
+      statusEl.textContent = "Running";
       setRingReady();
     } else {
-      statusEl.textContent="Waiting for quiet";
+      statusEl.textContent = "Waiting for quiet";
       startWaitingAlert();
     }
   }
 
-  if (running){
-    timeLeft-=dt;
-    if(timeLeft<0) timeLeft=0;
+  if (running) {
+    timeLeft -= dt;
+    if (timeLeft < 0) timeLeft = 0;
 
-    timeEl.textContent=formatTime(timeLeft);
+    timeEl.textContent = formatTime(timeLeft);
     updateCircle();
 
-    if(timeLeft===0){
-      running=false;
-      isActive=false;
-      statusEl.textContent="Finished";
-      progressEl.style.stroke="#3b82f6";
+    if (timeLeft === 0) {
+      running = false;
+      isActive = false;
+      statusEl.textContent = "Finished";
+      setRingFinished();
     }
   }
 
@@ -416,42 +445,70 @@ function tick(now){
 }
 
 mainBtn.onclick = async () => {
-  if(!started){
-    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
-    audioContext=new AudioContext();
-    const src=audioContext.createMediaStreamSource(stream);
-    analyser=audioContext.createAnalyser();
-    analyser.fftSize=2048;
-    dataArray=new Float32Array(analyser.fftSize);
+  if (!started) {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioContext = new AudioContext();
+    const src = audioContext.createMediaStreamSource(stream);
+    analyser = audioContext.createAnalyser();
+    analyser.fftSize = 2048;
+    dataArray = new Float32Array(analyser.fftSize);
     src.connect(analyser);
     requestAnimationFrame(tick);
-    started=true;
+    started = true;
   }
 
-  if (!isActive){
-    isActive=true;
-    manuallyPaused=false;
-    totalTime=parseInt(durationEl.value)*60;
-    timeLeft=totalTime;
-  } else if (!manuallyPaused){
-    manuallyPaused=true;
+  if (!isActive) {
+    isActive = true;
+    manuallyPaused = false;
+    totalTime = parseInt(durationEl.value, 10) * 60;
+    timeLeft = totalTime;
+    pauseUntil = 0;
+    lastTick = null;
+    timeEl.textContent = formatTime(timeLeft);
+    cancelWaitingAlert();
+    updateCircle();
+
+  } else if (!manuallyPaused) {
+    manuallyPaused = true;
+
   } else {
-    manuallyPaused=false;
+    manuallyPaused = false;
+    lastTick = null;
   }
 
   updateButtons();
 };
 
-resetBtn.onclick=()=>{
-  isActive=false;
-  manuallyPaused=false;
-  running=false;
-  totalTime=parseInt(durationEl.value)*60;
-  timeLeft=totalTime;
-  statusEl.textContent="Ready";
-  progressEl.style.stroke="#22c55e";
+resetBtn.onclick = () => {
+  isActive = false;
+  manuallyPaused = false;
+  running = false;
+
+  pauseUntil = 0;
+  lastTick = null;
+
+  totalTime = parseInt(durationEl.value, 10) * 60;
+  timeLeft = totalTime;
+
+  cancelWaitingAlert();
+
+  timeEl.textContent = formatTime(timeLeft);
+  statusEl.textContent = "Ready";
+
+  meterEl.style.width = "0%";
+  meterEl.style.background = "#22c55e";
+  meterLimit.style.left = (parseFloat(thresholdEl.value) * 100) + "%";
+
+  progressEl.style.stroke = "#22c55e";
+  updateCircle();
+
   updateButtons();
 };
+
+timeEl.textContent = formatTime(timeLeft);
+meterLimit.style.left = (parseFloat(thresholdEl.value) * 100) + "%";
+updateCircle();
+updateButtons();
 </script>
 
 </body>
