@@ -6,6 +6,12 @@
 <title>Quiet Countdown</title>
 
 <style>
+/* Prevent scrolling completely */
+html, body {
+  overflow: hidden;
+  touch-action: none;
+}
+
 body {
   margin: 0;
   font-family: system-ui, sans-serif;
@@ -14,11 +20,12 @@ body {
   display: grid;
   place-items: center;
   height: 100vh;
+  font-size: clamp(16px, 1.2vw, 18px); /* 👈 better base scaling */
 }
 
 .card {
   width: min(90vw, 600px);
-  padding: 2rem;
+  padding: clamp(1.5rem, 3vw, 2.5rem);
   border-radius: 24px;
   text-align: center;
   background: #111827;
@@ -42,31 +49,33 @@ svg {
   inset: 0;
   display: grid;
   place-items: center;
-  font-size: clamp(2rem, 6vw, 4rem);
+  font-size: clamp(2.5rem, 6vw, 4.5rem); /* 👈 bigger + consistent */
   font-weight: bold;
 }
 
 .status {
   margin-top: 1rem;
   color: #94a3b8;
+  font-size: 1rem;
 }
 
 .buttons {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.75rem;
   justify-content: center;
-  margin-top: 1rem;
+  margin-top: 1.2rem;
 }
 
 button {
-  padding: 0.6rem 1.2rem;
-  border-radius: 12px;
+  padding: 0.8rem 1.4rem;
+  border-radius: 14px;
   border: none;
   background: #2563eb;
   color: white;
   cursor: pointer;
   touch-action: manipulation;
-  min-height: 48px; /* better touch target */
+  min-height: 48px;
+  font-size: 1rem;
 }
 
 button.secondary {
@@ -78,28 +87,72 @@ button:disabled {
 }
 
 .control {
-  margin-top: 1.2rem;
+  margin-top: 1.4rem;
   text-align: left;
 }
 
 .control label {
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   color: #94a3b8;
 }
 
-input {
+input[type="number"] {
   width: 100%;
+  font-size: 1rem;
+  padding: 0.4rem;
+}
+
+/* Slider improvements */
+input[type="range"] {
+  width: 100%;
+  margin-top: 0.8rem;
+  padding: 14px 0;           /* 👈 large touch area */
+  touch-action: none;        /* 👈 prevents scroll interference */
+  -webkit-appearance: none;
+  background: transparent;
+}
+
+/* Track */
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 10px;
+  background: #1f2937;
+  border-radius: 999px;
+}
+
+input[type="range"]::-moz-range-track {
+  height: 10px;
+  background: #1f2937;
+  border-radius: 999px;
+}
+
+/* Thumb */
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #22c55e;
+  margin-top: -9px;
+  cursor: pointer;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #22c55e;
+  cursor: pointer;
 }
 
 /* Meter */
 .meter-wrapper {
   position: relative;
-  margin-top: 0.5rem;
+  margin-top: 0.6rem;
 }
 
 .meter {
   position: relative;
-  height: 10px;
+  height: 12px;
   background: #1f2937;
   border-radius: 999px;
   overflow: hidden;
@@ -119,7 +172,7 @@ input {
   background: #f87171;
 }
 
-/* Mobile */
+/* Mobile tweaks */
 @media (max-width: 600px) {
   .circle {
     width: 80vw;
@@ -136,8 +189,12 @@ input {
 
   button {
     width: 100%;
+    font-size: 1.3rem;
     padding: 1rem;
-    font-size: 1.3rem; /* ✅ bigger text */
+  }
+
+  .control label {
+    font-size: 1rem;
   }
 }
 </style>
@@ -191,6 +248,7 @@ input {
 </div>
 
 <script>
+/* JS unchanged */
 const MAX_VOLUME = 0.1;
 const circumference = 2 * Math.PI * 90;
 
