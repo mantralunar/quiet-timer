@@ -10,7 +10,7 @@
   box-sizing: border-box;
 }
 
-/* Lock layout (no scroll, no zoom feel) */
+/* Lock layout */
 html, body {
   margin: 0;
   padding: 0;
@@ -26,7 +26,7 @@ html {
   width: 100%;
 }
 
-/* Better centering */
+/* Upward-biased layout */
 body {
   font-family: system-ui, sans-serif;
   background: #0f172a;
@@ -34,10 +34,10 @@ body {
 
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;     /* 👈 shifted upward */
 
   min-height: 100vh;
-  padding: 2rem 1rem;
+  padding: 2vh 1rem 1rem;
 
   font-size: clamp(16px, 1.2vw, 18px);
 }
@@ -47,12 +47,16 @@ body {
   width: min(92vw, 600px);
   max-width: 100%;
 
-  padding: clamp(2rem, 3vw, 3rem);
-  margin: auto;
+  padding: clamp(1.5rem, 3vw, 2.5rem);
+  padding-top: clamp(1rem, 2vw, 1.5rem);     /* 👈 reduced */
+  padding-bottom: clamp(2rem, 3vw, 3rem);    /* 👈 increased */
 
   border-radius: 24px;
   text-align: center;
   background: #111827;
+
+  transform-origin: center;
+  will-change: transform;
 }
 
 /* Circle */
@@ -60,7 +64,7 @@ body {
   position: relative;
   width: min(70vw, 420px);
   height: min(70vw, 420px);
-  margin: 1.5rem auto 2.5rem; /* 👈 visually balanced */
+  margin: 0.5rem auto 1.5rem; /* 👈 tighter top */
 }
 
 svg {
@@ -79,7 +83,7 @@ svg {
 }
 
 .status {
-  margin-top: 0.5rem;
+  margin-top: 0.2rem;
   color: #94a3b8;
   font-size: 1rem;
 }
@@ -89,7 +93,7 @@ svg {
   display: flex;
   gap: 0.75rem;
   justify-content: center;
-  margin-top: 1.2rem;
+  margin-top: 0.8rem;
 }
 
 button {
@@ -114,7 +118,7 @@ button:disabled {
 
 /* Controls */
 .control {
-  margin-top: 1.4rem;
+  margin-top: 1rem;
   text-align: left;
 }
 
@@ -199,10 +203,6 @@ input[type="range"]::-moz-range-thumb {
 
 /* Mobile */
 @media (max-width: 600px) {
-  body {
-    padding: 1rem;
-  }
-
   .circle {
     width: 80vw;
     height: 80vw;
@@ -277,7 +277,7 @@ input[type="range"]::-moz-range-thumb {
 </div>
 
 <script>
-/* JS unchanged */
+/* Existing JS unchanged */
 const MAX_VOLUME = 0.1;
 const circumference = 2 * Math.PI * 90;
 
@@ -400,6 +400,27 @@ function tick(now){
   updateButtons();
   requestAnimationFrame(tick);
 }
+
+/* Dynamic scaling */
+function scaleToFit() {
+  const card = document.querySelector(".card");
+
+  card.style.transform = "scale(1)";
+
+  const rect = card.getBoundingClientRect();
+  const vh = window.innerHeight;
+
+  const padding = 20;
+  const available = vh - padding;
+
+  if (rect.height > available) {
+    const scale = Math.max(0.85, available / rect.height);
+    card.style.transform = `scale(${scale})`;
+  }
+}
+
+window.addEventListener("load", scaleToFit);
+window.addEventListener("resize", scaleToFit);
 
 mainBtn.onclick = async () => {
 
