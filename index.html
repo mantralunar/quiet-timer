@@ -2,40 +2,65 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Quiet Countdown</title>
 
 <style>
-/* Prevent scrolling completely */
-html, body {
-  overflow: hidden;
-  touch-action: none;
+* {
+  box-sizing: border-box;
 }
 
-body {
+/* Lock layout (no scroll, no zoom feel) */
+html, body {
   margin: 0;
+  padding: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+  height: 100%;
+  width: 100%;
+}
+
+html {
+  position: fixed;
+  width: 100%;
+}
+
+/* Better centering */
+body {
   font-family: system-ui, sans-serif;
   background: #0f172a;
   color: #e2e8f0;
-  display: grid;
-  place-items: center;
-  height: 100vh;
-  font-size: clamp(16px, 1.2vw, 18px); /* 👈 better base scaling */
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  min-height: 100vh;
+  padding: 2rem 1rem;
+
+  font-size: clamp(16px, 1.2vw, 18px);
 }
 
+/* Card */
 .card {
-  width: min(90vw, 600px);
-  padding: clamp(1.5rem, 3vw, 2.5rem);
+  width: min(92vw, 600px);
+  max-width: 100%;
+
+  padding: clamp(2rem, 3vw, 3rem);
+  margin: auto;
+
   border-radius: 24px;
   text-align: center;
   background: #111827;
 }
 
+/* Circle */
 .circle {
   position: relative;
   width: min(70vw, 420px);
   height: min(70vw, 420px);
-  margin: 2rem auto;
+  margin: 1.5rem auto 2.5rem; /* 👈 visually balanced */
 }
 
 svg {
@@ -49,16 +74,17 @@ svg {
   inset: 0;
   display: grid;
   place-items: center;
-  font-size: clamp(2.5rem, 6vw, 4.5rem); /* 👈 bigger + consistent */
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
   font-weight: bold;
 }
 
 .status {
-  margin-top: 1rem;
+  margin-top: 0.5rem;
   color: #94a3b8;
   font-size: 1rem;
 }
 
+/* Buttons */
 .buttons {
   display: flex;
   gap: 0.75rem;
@@ -86,6 +112,7 @@ button:disabled {
   opacity: 0.5;
 }
 
+/* Controls */
 .control {
   margin-top: 1.4rem;
   text-align: left;
@@ -99,20 +126,19 @@ button:disabled {
 input[type="number"] {
   width: 100%;
   font-size: 1rem;
-  padding: 0.4rem;
+  padding: 0.5rem;
 }
 
-/* Slider improvements */
+/* Slider */
 input[type="range"] {
   width: 100%;
   margin-top: 0.8rem;
-  padding: 14px 0;           /* 👈 large touch area */
-  touch-action: none;        /* 👈 prevents scroll interference */
+  padding: 14px 0;
+  touch-action: none;
   -webkit-appearance: none;
   background: transparent;
 }
 
-/* Track */
 input[type="range"]::-webkit-slider-runnable-track {
   height: 10px;
   background: #1f2937;
@@ -125,7 +151,6 @@ input[type="range"]::-moz-range-track {
   border-radius: 999px;
 }
 
-/* Thumb */
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 28px;
@@ -172,8 +197,12 @@ input[type="range"]::-moz-range-thumb {
   background: #f87171;
 }
 
-/* Mobile tweaks */
+/* Mobile */
 @media (max-width: 600px) {
+  body {
+    padding: 1rem;
+  }
+
   .circle {
     width: 80vw;
     height: 80vw;
