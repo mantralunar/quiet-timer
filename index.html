@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Quiet Countdown</title>
 
 <style>
@@ -14,6 +14,7 @@ body {
   display: grid;
   place-items: center;
   height: 100vh;
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .card {
@@ -69,6 +70,7 @@ button {
   background: #2563eb;
   color: white;
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 button.secondary {
@@ -120,6 +122,46 @@ input {
   bottom: 0;
   width: 2px;
   background: #f87171;
+}
+
+/* 📱 Mobile improvements */
+@media (max-width: 600px) {
+  body {
+    padding: 1rem;
+    height: auto;
+    min-height: 100vh;
+    align-items: start;
+  }
+
+  .card {
+    width: 100%;
+    padding: 1.5rem 1rem;
+    border-radius: 16px;
+  }
+
+  .circle {
+    width: 80vw;
+    height: 80vw;
+    margin: 1.5rem auto;
+  }
+
+  .time {
+    font-size: 12vw;
+  }
+
+  .buttons {
+    flex-direction: column;
+  }
+
+  button {
+    width: 100%;
+    padding: 1rem;
+    font-size: 1rem;
+  }
+
+  .control {
+    margin-top: 1rem;
+  }
 }
 </style>
 </head>
