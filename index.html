@@ -14,7 +14,6 @@ body {
   display: grid;
   place-items: center;
   height: 100vh;
-  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .card {
@@ -22,7 +21,7 @@ body {
   padding: 2rem;
   border-radius: 24px;
   text-align: center;
-  background: linear-gradient(145deg, #111827, #0b1220);
+  background: #111827;
 }
 
 .circle {
@@ -32,7 +31,11 @@ body {
   margin: 2rem auto;
 }
 
-svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
 
 .time {
   position: absolute;
@@ -43,7 +46,10 @@ svg { width: 100%; height: 100%; transform: rotate(-90deg); }
   font-weight: bold;
 }
 
-.status { margin-top: 1rem; color: #94a3b8; }
+.status {
+  margin-top: 1rem;
+  color: #94a3b8;
+}
 
 .buttons {
   display: flex;
@@ -62,23 +68,75 @@ button {
   touch-action: manipulation;
 }
 
-button.secondary { background: #374151; }
-button:disabled { opacity: 0.5; cursor: not-allowed; }
+button.secondary {
+  background: #374151;
+}
 
-.control { margin-top: 1.2rem; text-align: left; }
-.control label { font-size: 0.85rem; color: #94a3b8; }
+button:disabled {
+  opacity: 0.5;
+}
 
-input { width: 100%; }
+.control {
+  margin-top: 1.2rem;
+  text-align: left;
+}
 
-.meter { height: 10px; background: #1f2937; border-radius: 999px; overflow: hidden; }
-.meter-fill { height: 100%; width: 0%; transition: 0.1s; }
-.meter-limit { position: absolute; width: 2px; background: red; top:0; bottom:0; }
+.control label {
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
 
+input {
+  width: 100%;
+}
+
+/* FIXED meter layout */
+.meter-wrapper {
+  position: relative;
+  margin-top: 0.5rem;
+}
+
+.meter {
+  position: relative;
+  height: 10px;
+  background: #1f2937;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.meter-fill {
+  height: 100%;
+  width: 0%;
+  transition: width 0.1s, background 0.2s;
+}
+
+.meter-limit {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #f87171;
+}
+
+/* Mobile */
 @media (max-width: 600px) {
-  .circle { width: 80vw; height: 80vw; }
-  .time { font-size: 12vw; }
-  .buttons { flex-direction: column; }
-  button { width: 100%; padding: 1rem; }
+  .circle {
+    width: 80vw;
+    height: 80vw;
+  }
+
+  .time {
+    font-size: 12vw;
+  }
+
+  .buttons {
+    flex-direction: column;
+  }
+
+  button {
+    width: 100%;
+    padding: 1rem;
+  }
 }
 </style>
 </head>
@@ -90,9 +148,13 @@ input { width: 100%; }
 <div class="circle">
 <svg viewBox="0 0 200 200">
 <circle cx="100" cy="100" r="90" stroke="#1f2937" stroke-width="10" fill="none"/>
-<circle id="progress" cx="100" cy="100" r="90"
-stroke="#22c55e" stroke-width="10" fill="none"
-stroke-dasharray="565" stroke-dashoffset="0"/>
+<circle id="progress"
+  cx="100" cy="100" r="90"
+  stroke="#22c55e"
+  stroke-width="10"
+  fill="none"
+  stroke-dasharray="565"
+  stroke-dashoffset="0"/>
 </svg>
 <div class="time" id="time">15:00</div>
 </div>
@@ -111,59 +173,71 @@ stroke-dasharray="565" stroke-dashoffset="0"/>
 
 <div class="control">
 <label>Maximum noise level</label>
-<div class="meter">
-<div id="meter" class="meter-fill"></div>
-<div id="meterLimit" class="meter-limit"></div>
+
+<div class="meter-wrapper">
+  <div class="meter">
+    <div id="meter" class="meter-fill"></div>
+    <div id="meterLimit" class="meter-limit"></div>
+  </div>
 </div>
+
 <input id="threshold" type="range" min="0" max="1" step="0.01" value="0.3">
+
 </div>
 
 </div>
 
 <script>
 const MAX_VOLUME = 0.1;
-const circumference = 2*Math.PI*90;
+const circumference = 2 * Math.PI * 90;
 
 let audioContext, analyser, dataArray;
 
-let timeLeft=900,totalTime=900;
-let running=false, manuallyPaused=false, started=false, isActive=false;
+let timeLeft = 900;
+let totalTime = 900;
 
-let pauseUntil=0,lastTick=null, smoothedVolume=0;
+let running = false;
+let manuallyPaused = false;
+let started = false;
+let isActive = false;
 
-const mainBtn=document.getElementById("main");
-const resetBtn=document.getElementById("reset");
+let pauseUntil = 0;
+let lastTick = null;
+let smoothedVolume = 0;
 
-const timeEl=document.getElementById("time");
-const statusEl=document.getElementById("status");
-const meterEl=document.getElementById("meter");
-const meterLimit=document.getElementById("meterLimit");
-const progressEl=document.getElementById("progress");
+const mainBtn = document.getElementById("main");
+const resetBtn = document.getElementById("reset");
 
-const thresholdEl=document.getElementById("threshold");
-const durationEl=document.getElementById("duration");
+const timeEl = document.getElementById("time");
+const statusEl = document.getElementById("status");
+const meterEl = document.getElementById("meter");
+const meterLimit = document.getElementById("meterLimit");
+const progressEl = document.getElementById("progress");
+
+const thresholdEl = document.getElementById("threshold");
+const durationEl = document.getElementById("duration");
 
 function formatTime(s){
-  const m=Math.floor(s/60);
-  const sec=Math.floor(s%60);
+  const m = Math.floor(s/60);
+  const sec = Math.floor(s%60);
   return `${m.toString().padStart(2,"0")}:${sec.toString().padStart(2,"0")}`;
 }
 
-function updateCircle(){
+function updateCircle() {
   progressEl.style.strokeDashoffset =
-    circumference*(1-timeLeft/totalTime);
+    circumference * (1 - timeLeft / totalTime);
 }
 
-function updateButtons(){
-  if(!isActive){
-    mainBtn.textContent="Start";
-    resetBtn.disabled=true;
-  } else if(manuallyPaused){
-    mainBtn.textContent="Resume";
-    resetBtn.disabled=false;
+function updateButtons() {
+  if (!isActive) {
+    mainBtn.textContent = "Start";
+    resetBtn.disabled = true;
+  } else if (manuallyPaused) {
+    mainBtn.textContent = "Resume";
+    resetBtn.disabled = false;
   } else {
-    mainBtn.textContent="Pause";
-    resetBtn.disabled=false;
+    mainBtn.textContent = "Pause";
+    resetBtn.disabled = false;
   }
 }
 
@@ -173,8 +247,8 @@ function getVolume(){
   for(let i=0;i<dataArray.length;i++){
     sum+=dataArray[i]*dataArray[i];
   }
-  const rms=Math.sqrt(sum/dataArray.length)*1.5; // boosted
-  smoothedVolume=smoothedVolume*0.9 + rms*0.1;
+  const rms = Math.sqrt(sum/dataArray.length)*1.5;
+  smoothedVolume = smoothedVolume*0.9 + rms*0.1;
   return smoothedVolume;
 }
 
@@ -212,6 +286,7 @@ function tick(now){
   if(running){
     timeLeft-=dt;
     if(timeLeft<0) timeLeft=0;
+
     timeEl.textContent=formatTime(timeLeft);
     updateCircle();
   }
@@ -220,62 +295,67 @@ function tick(now){
   requestAnimationFrame(tick);
 }
 
-mainBtn.onclick=async ()=>{
+mainBtn.onclick = async () => {
 
   if(!started){
-    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
 
-    audioContext=new AudioContext();
+    audioContext = new AudioContext();
 
-    const src=audioContext.createMediaStreamSource(stream);
+    const src = audioContext.createMediaStreamSource(stream);
 
-    // 🔥 FIX: GainNode
-    const gain=audioContext.createGain();
-    gain.gain.value=1;
+    const gain = audioContext.createGain(); // FIX
+    gain.gain.value = 1;
 
-    analyser=audioContext.createAnalyser();
-    analyser.fftSize=2048;
+    analyser = audioContext.createAnalyser();
+    analyser.fftSize = 2048;
 
     analyser.minDecibels = -90;
     analyser.maxDecibels = -10;
     analyser.smoothingTimeConstant = 0.8;
 
-    dataArray=new Float32Array(analyser.fftSize);
+    dataArray = new Float32Array(analyser.fftSize);
 
     src.connect(gain);
     gain.connect(analyser);
 
     requestAnimationFrame(tick);
-    started=true;
+    started = true;
   }
 
-  if(!isActive){
-    isActive=true;
-    manuallyPaused=false;
-    totalTime=parseInt(durationEl.value)*60;
-    timeLeft=totalTime;
-    timeEl.textContent=formatTime(timeLeft);
+  if (!isActive) {
+    isActive = true;
+    manuallyPaused = false;
+
+    totalTime = parseInt(durationEl.value) * 60;
+    timeLeft = totalTime;
+
+    timeEl.textContent = formatTime(timeLeft);
     updateCircle();
 
-  } else if(!manuallyPaused){
-    manuallyPaused=true;
+  } else if (!manuallyPaused) {
+    manuallyPaused = true;
   } else {
-    manuallyPaused=false;
+    manuallyPaused = false;
   }
 
   updateButtons();
 };
 
-resetBtn.onclick=()=>{
-  isActive=false;
-  manuallyPaused=false;
-  running=false;
-  totalTime=parseInt(durationEl.value)*60;
-  timeLeft=totalTime;
-  timeEl.textContent=formatTime(timeLeft);
+resetBtn.onclick = () => {
+  isActive = false;
+  manuallyPaused = false;
+  running = false;
+
+  totalTime = parseInt(durationEl.value) * 60;
+  timeLeft = totalTime;
+
+  timeEl.textContent = formatTime(timeLeft);
   updateCircle();
-  statusEl.textContent="Ready";
-  meterEl.style.width="0%";
+
+  statusEl.textContent = "Ready";
+  meterEl.style.width = "0%";
+
   updateButtons();
 };
 </script>
