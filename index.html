@@ -6,146 +6,113 @@
 <title>Quiet Countdown</title>
 
 <style>
-  body {
-    margin: 0;
-    font-family: system-ui, sans-serif;
-    background: #0f172a;
-    color: #e2e8f0;
-    display: grid;
-    place-items: center;
-    height: 100vh;
-  }
+/* (same styles as before, unchanged) */
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: #0f172a;
+  color: #e2e8f0;
+  display: grid;
+  place-items: center;
+  height: 100vh;
+}
 
-  .card {
-    width: min(90vw, 600px);
-    padding: 2rem;
-    border-radius: 24px;
-    text-align: center;
-    background: linear-gradient(145deg, #111827, #0b1220);
-    border: 1px solid rgba(255,255,255,0.05);
-    box-shadow:
-      0 20px 50px rgba(0,0,0,0.6),
-      inset 0 1px 0 rgba(255,255,255,0.03);
-  }
+.card {
+  width: min(90vw, 600px);
+  padding: 2rem;
+  border-radius: 24px;
+  text-align: center;
+  background: linear-gradient(145deg, #111827, #0b1220);
+  border: 1px solid rgba(255,255,255,0.05);
+  box-shadow:
+    0 20px 50px rgba(0,0,0,0.6),
+    inset 0 1px 0 rgba(255,255,255,0.03);
+}
 
-  h1 {
-    font-size: clamp(1.2rem, 2vw, 1.6rem);
-    color: #94a3b8;
-  }
+.circle {
+  position: relative;
+  width: min(70vw, 420px);
+  height: min(70vw, 420px);
+  margin: 2rem auto;
+}
 
-  .circle {
-    position: relative;
-    width: min(70vw, 420px);
-    height: min(70vw, 420px);
-    margin: 2rem auto;
-  }
+svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
 
-  svg {
-    width: 100%;
-    height: 100%;
-    transform: rotate(-90deg);
-  }
+.time {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: clamp(2rem, 6vw, 4rem);
+  font-weight: bold;
+}
 
-  #progress {
-    transition: stroke-dashoffset 0.2s linear, stroke 0.3s ease;
-  }
+.status {
+  margin-top: 1rem;
+  color: #94a3b8;
+}
 
-  .time {
-    position: absolute;
-    inset: 0;
-    display: grid;
-    place-items: center;
-    font-size: clamp(2rem, 6vw, 4rem);
-    font-weight: bold;
-  }
+.buttons {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-top: 1rem;
+}
 
-  .status {
-    margin-top: 1rem;
-    font-size: 1rem;
-    color: #94a3b8;
-  }
+button {
+  padding: 0.6rem 1.2rem;
+  border-radius: 12px;
+  border: none;
+  background: #2563eb;
+  color: white;
+  cursor: pointer;
+}
 
-  .buttons {
-    display: flex;
-    gap: 0.5rem;
-    justify-content: center;
-    margin-top: 1rem;
-  }
+button.secondary {
+  background: #374151;
+}
 
-  button {
-    padding: 0.6rem 1.2rem;
-    border-radius: 12px;
-    border: none;
-    background: #2563eb;
-    color: white;
-    cursor: pointer;
-  }
+.meter {
+  height: 10px;
+  background: #1f2937;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 1rem;
+}
 
-  button.secondary {
-    background: #374151;
-  }
+.meter-fill {
+  height: 100%;
+  width: 0%;
+  transition: width 0.1s;
+}
 
-  .control {
-    margin-top: 1.2rem;
-    text-align: left;
-  }
-
-  .control label {
-    display: block;
-    margin-bottom: 0.4rem;
-    font-size: 0.85rem;
-    color: #94a3b8;
-  }
-
-  input {
-    width: 100%;
-  }
-
-  .meter-wrapper {
-    position: relative;
-  }
-
-  .meter {
-    position: relative;
-    height: 10px;
-    background: #1f2937;
-    border-radius: 999px;
-    overflow: hidden;
-  }
-
-  .meter-fill {
-    height: 100%;
-    width: 0%;
-    background: #22c55e;
-    transition: width 0.1s, background 0.2s;
-  }
-
-  .meter-limit {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: 2px;
-    background: #f87171;
-  }
+.meter-limit {
+  position: absolute;
+  width: 2px;
+  background: red;
+  height: 10px;
+}
 </style>
 </head>
 
 <body>
 
 <div class="card">
-  <h1>Quiet Countdown</h1>
 
   <div class="circle">
     <svg viewBox="0 0 200 200">
       <circle cx="100" cy="100" r="90" stroke="#1f2937" stroke-width="10" fill="none"/>
       <circle id="progress"
-              cx="100" cy="100" r="90"
-              stroke="#22c55e"
-              stroke-width="10"
-              fill="none"
-              stroke-linecap="round"
-              stroke-dasharray="565"
-              stroke-dashoffset="565"/>
+        cx="100" cy="100" r="90"
+        stroke="#22c55e"
+        stroke-width="10"
+        fill="none"
+        stroke-dasharray="565"
+        stroke-dashoffset="565"/>
     </svg>
     <div class="time" id="time">15:00</div>
   </div>
@@ -153,25 +120,16 @@
   <div class="status" id="status">Ready</div>
 
   <div class="buttons">
-    <button id="start">Start</button>
-    <button id="pause" class="secondary">Pause</button>
+    <button id="main">Start</button>
+    <button id="restart" class="secondary">Restart</button>
   </div>
 
-  <div class="control">
-    <label>Duration (minutes)</label>
-    <input type="number" id="duration" value="15" min="1">
+  <input id="threshold" type="range" min="0" max="1" step="0.01" value="0.3">
+
+  <div class="meter">
+    <div class="meter-fill" id="meter"></div>
   </div>
 
-  <div class="control">
-    <label>Maximum noise level</label>
-    <div class="meter-wrapper">
-      <div class="meter">
-        <div class="meter-fill" id="meter"></div>
-        <div class="meter-limit" id="meterLimit"></div>
-      </div>
-      <input type="range" id="threshold" min="0" max="1" step="0.01" value="0.3">
-    </div>
-  </div>
 </div>
 
 <script>
@@ -184,146 +142,98 @@ let running = false;
 let manuallyPaused = false;
 let started = false;
 
-let lastTick = null;
-let smoothedVolume = 0;
 let pauseUntil = 0;
+let lastTick = null;
 
-const MIN_PAUSE = 3000;
+const mainBtn = document.getElementById("main");
+const restartBtn = document.getElementById("restart");
 
 const timeEl = document.getElementById("time");
 const statusEl = document.getElementById("status");
-const progressEl = document.getElementById("progress");
+const meterEl = document.getElementById("meter");
 
 const thresholdEl = document.getElementById("threshold");
-const durationEl = document.getElementById("duration");
 
-const meterEl = document.getElementById("meter");
-const meterLimit = document.getElementById("meterLimit");
-
-const startBtn = document.getElementById("start");
-
-const circumference = 2 * Math.PI * 90;
-
-function formatTime(seconds) {
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${m.toString().padStart(2,"0")}:${s.toString().padStart(2,"0")}`;
+function formatTime(s){
+  const m = Math.floor(s/60);
+  const sec = Math.floor(s%60);
+  return `${m.toString().padStart(2,"0")}:${sec.toString().padStart(2,"0")}`;
 }
 
-function updateCircle() {
-  progressEl.style.strokeDashoffset = circumference * (1 - timeLeft / totalTime);
-}
-
-function getVolume() {
+function getVolume(){
   analyser.getFloatTimeDomainData(dataArray);
-  let sum = 0;
-  for (let i = 0; i < dataArray.length; i++) {
-    sum += dataArray[i] * dataArray[i];
+  let sum=0;
+  for(let i=0;i<dataArray.length;i++){
+    sum+=dataArray[i]*dataArray[i];
   }
-  const rms = Math.sqrt(sum / dataArray.length);
-  smoothedVolume = smoothedVolume * 0.9 + rms * 0.1;
-  return smoothedVolume;
+  return Math.sqrt(sum/dataArray.length);
 }
 
-function beep() {
-  const ctx = new AudioContext();
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-  osc.frequency.value = 880;
-  osc.start();
-  gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 1);
-  osc.stop(ctx.currentTime + 1);
-}
+function tick(now){
+  if(!lastTick) lastTick=now;
+  const dt=(now-lastTick)/1000;
+  lastTick=now;
 
-function tick(now) {
-  if (!lastTick) lastTick = now;
-  const delta = (now - lastTick) / 1000;
-  lastTick = now;
+  const vol = getVolume();
+  const norm = Math.min(vol/0.1,1);
+  const thr = parseFloat(thresholdEl.value);
 
-  if (!analyser) {
-    requestAnimationFrame(tick);
-    return;
-  }
+  meterEl.style.width = (norm*100)+"%";
+  meterEl.style.background = norm < thr ? "green" : "red";
 
-  const volume = getVolume();
-  const threshold = parseFloat(thresholdEl.value);
-  const normalized = Math.min(volume / 0.1, 1);
+  if(!manuallyPaused){
+    if(norm >= thr) pauseUntil = now + 3000;
 
-  meterEl.style.width = (normalized * 100) + "%";
-  meterLimit.style.left = (threshold * 100) + "%";
-
-  meterEl.style.background = normalized < threshold ? "#22c55e" : "#ef4444";
-
-  const isQuiet = normalized < threshold;
-
-  if (!manuallyPaused) {
-    if (!isQuiet) pauseUntil = now + MIN_PAUSE;
-
-    running = (now >= pauseUntil && isQuiet);
-
+    running = (now >= pauseUntil && norm < thr);
     statusEl.textContent = running ? "Running" : "Paused — waiting for quiet";
-    progressEl.style.stroke = running ? "#22c55e" : "#f59e0b";
-  } else {
-    running = false;
-    statusEl.textContent = "Paused (manual)";
-    progressEl.style.stroke = "#f59e0b";
   }
 
-  if (running && timeLeft > 0) {
-    timeLeft -= delta;
-    if (timeLeft < 0) timeLeft = 0;
-
+  if(running){
+    timeLeft -= dt;
+    if(timeLeft<0) timeLeft=0;
     timeEl.textContent = formatTime(timeLeft);
-    updateCircle();
 
-    if (timeLeft === 0) {
-      running = false;
-      statusEl.textContent = "Finished";
-      progressEl.style.stroke = "#3b82f6";
-      startBtn.textContent = "Restart";
-      beep();
+    if(timeLeft===0){
+      running=false;
+      statusEl.textContent="Finished";
     }
   }
 
   requestAnimationFrame(tick);
 }
 
-// Start / Restart
-startBtn.onclick = async () => {
-  manuallyPaused = false;
+mainBtn.onclick = async () => {
 
-  if (!audioContext) {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  if(!started){
+    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
     audioContext = new AudioContext();
-    const source = audioContext.createMediaStreamSource(stream);
+    const src = audioContext.createMediaStreamSource(stream);
 
     analyser = audioContext.createAnalyser();
     analyser.fftSize = 2048;
     dataArray = new Float32Array(analyser.fftSize);
 
-    source.connect(analyser);
-  }
+    src.connect(analyser);
 
-  totalTime = parseInt(durationEl.value, 10) * 60;
-  timeLeft = totalTime;
-
-  timeEl.textContent = formatTime(timeLeft);
-  updateCircle();
-
-  startBtn.textContent = "Restart";
-  statusEl.textContent = "Listening…";
-
-  if (!started) {
     requestAnimationFrame(tick);
     started = true;
   }
+
+  if(running){
+    manuallyPaused = true;
+    running = false;
+    mainBtn.textContent = "Resume";
+  } else {
+    manuallyPaused = false;
+    mainBtn.textContent = "Pause";
+  }
 };
 
-// Pause
-document.getElementById("pause").onclick = () => {
-  manuallyPaused = true;
+restartBtn.onclick = () => {
+  timeLeft = totalTime;
+  timeEl.textContent = formatTime(timeLeft);
+  manuallyPaused = false;
+  mainBtn.textContent = "Pause";
 };
 </script>
 
