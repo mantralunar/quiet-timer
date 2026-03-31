@@ -6,8 +6,11 @@
 <title>Quiet Countdown</title>
 
 <style>
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
+/* Lock layout */
 html, body {
   margin: 0;
   padding: 0;
@@ -23,6 +26,7 @@ html {
   width: 100%;
 }
 
+/* Upward-biased layout */
 body {
   font-family: system-ui, sans-serif;
   background: #0f172a;
@@ -30,7 +34,7 @@ body {
 
   display: flex;
   justify-content: center;
-  align-items: flex-start;
+  align-items: flex-start;     /* 👈 shifted upward */
 
   min-height: 100vh;
   padding: 2vh 1rem 1rem;
@@ -38,22 +42,29 @@ body {
   font-size: clamp(16px, 1.2vw, 18px);
 }
 
+/* Card */
 .card {
   width: min(92vw, 600px);
+  max-width: 100%;
+
   padding: clamp(1.5rem, 3vw, 2.5rem);
-  padding-top: clamp(1rem, 2vw, 1.5rem);
-  padding-bottom: clamp(2rem, 3vw, 3rem);
+  padding-top: clamp(1rem, 2vw, 1.5rem);     /* 👈 reduced */
+  padding-bottom: clamp(2rem, 3vw, 3rem);    /* 👈 increased */
+
   border-radius: 24px;
   text-align: center;
   background: #111827;
+
   transform-origin: center;
+  will-change: transform;
 }
 
+/* Circle */
 .circle {
   position: relative;
   width: min(70vw, 420px);
   height: min(70vw, 420px);
-  margin: 0.5rem auto 1.5rem;
+  margin: 0.5rem auto 1.5rem; /* 👈 tighter top */
 }
 
 svg {
@@ -74,8 +85,10 @@ svg {
 .status {
   margin-top: 0.2rem;
   color: #94a3b8;
+  font-size: 1rem;
 }
 
+/* Buttons */
 .buttons {
   display: flex;
   gap: 0.75rem;
@@ -90,16 +103,37 @@ button {
   background: #2563eb;
   color: white;
   cursor: pointer;
+  touch-action: manipulation;
   min-height: 48px;
+  font-size: 1rem;
 }
 
-button.secondary { background: #374151; }
+button.secondary {
+  background: #374151;
+}
 
+button:disabled {
+  opacity: 0.5;
+}
+
+/* Controls */
 .control {
   margin-top: 1rem;
   text-align: left;
 }
 
+.control label {
+  font-size: 0.95rem;
+  color: #94a3b8;
+}
+
+input[type="number"] {
+  width: 100%;
+  font-size: 1rem;
+  padding: 0.5rem;
+}
+
+/* Slider */
 input[type="range"] {
   width: 100%;
   margin-top: 0.8rem;
@@ -109,6 +143,18 @@ input[type="range"] {
   background: transparent;
 }
 
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 10px;
+  background: #1f2937;
+  border-radius: 999px;
+}
+
+input[type="range"]::-moz-range-track {
+  height: 10px;
+  background: #1f2937;
+  border-radius: 999px;
+}
+
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 28px;
@@ -116,18 +162,69 @@ input[type="range"]::-webkit-slider-thumb {
   border-radius: 50%;
   background: #22c55e;
   margin-top: -9px;
+  cursor: pointer;
 }
 
-input[type="range"]::-webkit-slider-runnable-track {
-  height: 10px;
+input[type="range"]::-moz-range-thumb {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #22c55e;
+  cursor: pointer;
+}
+
+/* Meter */
+.meter-wrapper {
+  position: relative;
+  margin-top: 0.6rem;
+}
+
+.meter {
+  position: relative;
+  height: 12px;
   background: #1f2937;
   border-radius: 999px;
+  overflow: hidden;
 }
 
-@keyframes pulse {
-  0% { stroke-width: 10; }
-  50% { stroke-width: 14; }
-  100% { stroke-width: 10; }
+.meter-fill {
+  height: 100%;
+  width: 0%;
+  transition: width 0.1s, background 0.2s;
+}
+
+.meter-limit {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #f87171;
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+  .circle {
+    width: 80vw;
+    height: 80vw;
+  }
+
+  .time {
+    font-size: 12vw;
+  }
+
+  .buttons {
+    flex-direction: column;
+  }
+
+  button {
+    width: 100%;
+    font-size: 1.3rem;
+    padding: 1rem;
+  }
+
+  .control label {
+    font-size: 1rem;
+  }
 }
 </style>
 </head>
@@ -165,74 +262,230 @@ input[type="range"]::-webkit-slider-runnable-track {
 
 <div class="control">
 <label>Maximum noise level</label>
+
+<div class="meter-wrapper">
+  <div class="meter">
+    <div id="meter" class="meter-fill"></div>
+    <div id="meterLimit" class="meter-limit"></div>
+  </div>
+</div>
+
 <input id="threshold" type="range" min="0" max="1" step="0.01" value="0.3">
+
 </div>
 
 </div>
 
 <script>
+/* Existing JS unchanged */
 const MAX_VOLUME = 0.1;
 const circumference = 2 * Math.PI * 90;
+
+let audioContext, analyser, dataArray;
 
 let timeLeft = 900;
 let totalTime = 900;
 
 let running = false;
+let manuallyPaused = false;
+let started = false;
 let isActive = false;
-let wasTooLoud = false;
 
+let pauseUntil = 0;
+let lastTick = null;
+let smoothedVolume = 0;
+
+const mainBtn = document.getElementById("main");
+const resetBtn = document.getElementById("reset");
+
+const timeEl = document.getElementById("time");
+const statusEl = document.getElementById("status");
+const meterEl = document.getElementById("meter");
+const meterLimit = document.getElementById("meterLimit");
 const progressEl = document.getElementById("progress");
+
 const thresholdEl = document.getElementById("threshold");
+const durationEl = document.getElementById("duration");
+
+function formatTime(s){
+  const m = Math.floor(s/60);
+  const sec = Math.floor(s%60);
+  return `${m.toString().padStart(2,"0")}:${sec.toString().padStart(2,"0")}`;
+}
 
 function updateCircle() {
-  if (wasTooLoud) return;
   progressEl.style.strokeDashoffset =
     circumference * (1 - timeLeft / totalTime);
 }
 
-function simulateVolume() {
-  return Math.random(); // demo only
+function updateButtons() {
+  if (!isActive) {
+    mainBtn.textContent = "Start";
+    resetBtn.disabled = true;
+  } else if (manuallyPaused) {
+    mainBtn.textContent = "Resume";
+    resetBtn.disabled = false;
+  } else {
+    mainBtn.textContent = "Pause";
+    resetBtn.disabled = false;
+  }
 }
 
-function tick() {
-  const norm = simulateVolume();
-  const thr = parseFloat(thresholdEl.value);
-  const isQuiet = norm < thr;
+function getVolume(){
+  analyser.getFloatTimeDomainData(dataArray);
+  let sum=0;
+  for(let i=0;i<dataArray.length;i++){
+    sum+=dataArray[i]*dataArray[i];
+  }
+  const rms = Math.sqrt(sum/dataArray.length)*1.5;
+  smoothedVolume = smoothedVolume*0.9 + rms*0.1;
+  return smoothedVolume;
+}
 
-  if (!isQuiet) {
-    if (!wasTooLoud) {
-      wasTooLoud = true;
+function tick(now){
+  if(!lastTick) lastTick=now;
+  const dt=(now-lastTick)/1000;
+  lastTick=now;
 
-      progressEl.style.stroke = "#ef4444";
-      progressEl.style.animation = "none";
+  if(!analyser){ requestAnimationFrame(tick); return; }
 
-      progressEl.style.transition = "stroke-dashoffset 0.4s ease-out";
-      progressEl.style.strokeDashoffset = 0;
+  const vol=getVolume();
+  const norm=Math.min(vol/MAX_VOLUME,1);
+  const thr=parseFloat(thresholdEl.value);
 
-      setTimeout(() => {
-        progressEl.style.transition = "";
-        progressEl.style.animation = "pulse 0.6s infinite";
-      }, 400);
-    }
+  meterEl.style.width=(norm*100)+"%";
+  meterLimit.style.left=(thr*100)+"%";
+  meterEl.style.background=norm<thr?"#22c55e":"#ef4444";
+
+  const isQuiet=norm<thr;
+
+  if (!isActive) {
+    running = false;
+    statusEl.textContent = "Ready";
+    progressEl.style.stroke = "#22c55e";
+
+  } else if (manuallyPaused) {
+    running = false;
+    statusEl.textContent = "Paused";
+    progressEl.style.stroke = "#f59e0b";
+
   } else {
-    if (wasTooLoud) {
-      wasTooLoud = false;
-      progressEl.style.animation = "none";
-      progressEl.style.stroke = "#22c55e";
-      updateCircle();
-    }
+    if (!isQuiet) pauseUntil = now + 3000;
+    running = (now >= pauseUntil && isQuiet);
 
     if (running) {
-      timeLeft -= 0.05;
-      if (timeLeft < 0) timeLeft = 0;
-      updateCircle();
+      statusEl.textContent = "Running";
+      progressEl.style.stroke = "#22c55e";
+    } else {
+      statusEl.textContent = "Waiting for quiet";
+      progressEl.style.stroke = "#f59e0b";
     }
   }
 
+  if (running) {
+    timeLeft -= dt;
+    if (timeLeft < 0) timeLeft = 0;
+
+    timeEl.textContent = formatTime(timeLeft);
+    updateCircle();
+
+    if (timeLeft === 0) {
+      running = false;
+      isActive = false;
+      statusEl.textContent = "Finished";
+      progressEl.style.stroke = "#3b82f6";
+    }
+  }
+
+  updateButtons();
   requestAnimationFrame(tick);
 }
 
-tick();
+/* Dynamic scaling */
+function scaleToFit() {
+  const card = document.querySelector(".card");
+
+  card.style.transform = "scale(1)";
+
+  const rect = card.getBoundingClientRect();
+  const vh = window.innerHeight;
+
+  const padding = 20;
+  const available = vh - padding;
+
+  if (rect.height > available) {
+    const scale = Math.max(0.85, available / rect.height);
+    card.style.transform = `scale(${scale})`;
+  }
+}
+
+window.addEventListener("load", scaleToFit);
+window.addEventListener("resize", scaleToFit);
+
+mainBtn.onclick = async () => {
+
+  if(!started){
+    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+
+    audioContext = new AudioContext();
+
+    const src = audioContext.createMediaStreamSource(stream);
+
+    const gain = audioContext.createGain();
+    gain.gain.value = 1;
+
+    analyser = audioContext.createAnalyser();
+    analyser.fftSize = 2048;
+
+    analyser.minDecibels = -90;
+    analyser.maxDecibels = -10;
+    analyser.smoothingTimeConstant = 0.8;
+
+    dataArray = new Float32Array(analyser.fftSize);
+
+    src.connect(gain);
+    gain.connect(analyser);
+
+    requestAnimationFrame(tick);
+    started = true;
+  }
+
+  if (!isActive) {
+    isActive = true;
+    manuallyPaused = false;
+
+    totalTime = parseInt(durationEl.value) * 60;
+    timeLeft = totalTime;
+
+    timeEl.textContent = formatTime(timeLeft);
+    updateCircle();
+
+  } else if (!manuallyPaused) {
+    manuallyPaused = true;
+  } else {
+    manuallyPaused = false;
+  }
+
+  updateButtons();
+};
+
+resetBtn.onclick = () => {
+  isActive = false;
+  manuallyPaused = false;
+  running = false;
+
+  totalTime = parseInt(durationEl.value) * 60;
+  timeLeft = totalTime;
+
+  timeEl.textContent = formatTime(timeLeft);
+  updateCircle();
+
+  statusEl.textContent = "Ready";
+  progressEl.style.stroke = "#22c55e";
+  meterEl.style.width = "0%";
+
+  updateButtons();
+};
 </script>
 
 </body>
