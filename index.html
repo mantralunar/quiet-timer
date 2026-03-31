@@ -90,7 +90,7 @@ input {
   width: 100%;
 }
 
-/* FIXED meter layout */
+/* Meter */
 .meter-wrapper {
   position: relative;
   margin-top: 0.5rem;
@@ -153,6 +153,7 @@ input {
   stroke="#22c55e"
   stroke-width="10"
   fill="none"
+  stroke-linecap="round"
   stroke-dasharray="565"
   stroke-dashoffset="0"/>
 </svg>
@@ -269,26 +270,42 @@ function tick(now){
 
   const isQuiet=norm<thr;
 
-  if(!isActive){
-    running=false;
-    statusEl.textContent="Ready";
+  if (!isActive) {
+    running = false;
+    statusEl.textContent = "Ready";
+    progressEl.style.stroke = "#22c55e";
 
-  } else if(manuallyPaused){
-    running=false;
-    statusEl.textContent="Paused";
+  } else if (manuallyPaused) {
+    running = false;
+    statusEl.textContent = "Paused";
+    progressEl.style.stroke = "#f59e0b";
 
   } else {
-    if(!isQuiet) pauseUntil=now+3000;
-    running=(now>=pauseUntil && isQuiet);
-    statusEl.textContent=running?"Running":"Waiting for quiet";
+    if (!isQuiet) pauseUntil = now + 3000;
+    running = (now >= pauseUntil && isQuiet);
+
+    if (running) {
+      statusEl.textContent = "Running";
+      progressEl.style.stroke = "#22c55e";
+    } else {
+      statusEl.textContent = "Waiting for quiet";
+      progressEl.style.stroke = "#f59e0b";
+    }
   }
 
-  if(running){
-    timeLeft-=dt;
-    if(timeLeft<0) timeLeft=0;
+  if (running) {
+    timeLeft -= dt;
+    if (timeLeft < 0) timeLeft = 0;
 
-    timeEl.textContent=formatTime(timeLeft);
+    timeEl.textContent = formatTime(timeLeft);
     updateCircle();
+
+    if (timeLeft === 0) {
+      running = false;
+      isActive = false;
+      statusEl.textContent = "Finished";
+      progressEl.style.stroke = "#3b82f6";
+    }
   }
 
   updateButtons();
@@ -304,7 +321,7 @@ mainBtn.onclick = async () => {
 
     const src = audioContext.createMediaStreamSource(stream);
 
-    const gain = audioContext.createGain(); // FIX
+    const gain = audioContext.createGain();
     gain.gain.value = 1;
 
     analyser = audioContext.createAnalyser();
@@ -354,6 +371,7 @@ resetBtn.onclick = () => {
   updateCircle();
 
   statusEl.textContent = "Ready";
+  progressEl.style.stroke = "#22c55e";
   meterEl.style.width = "0%";
 
   updateButtons();
