@@ -57,22 +57,19 @@
     place-items: center;
     font-size: clamp(2rem, 6vw, 4rem);
     font-weight: bold;
-    transition: transform 0.2s ease;
   }
 
   .status {
     margin-top: 1rem;
-    font-size: clamp(0.9rem, 1.5vw, 1.1rem);
+    font-size: 1rem;
     color: #94a3b8;
   }
 
-  input, button {
-    margin-top: 0.6rem;
-    font-size: 1rem;
-  }
-
-  input[type="range"] {
-    width: 100%;
+  .buttons {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    margin-top: 1rem;
   }
 
   button {
@@ -84,31 +81,51 @@
     cursor: pointer;
   }
 
+  button.secondary {
+    background: #374151;
+  }
+
+  .control {
+    margin-top: 1.2rem;
+    text-align: left;
+  }
+
+  .control label {
+    display: block;
+    margin-bottom: 0.4rem;
+    font-size: 0.85rem;
+    color: #94a3b8;
+  }
+
+  input {
+    width: 100%;
+  }
+
+  .meter-wrapper {
+    position: relative;
+  }
+
   .meter {
-    height: 8px;
+    position: relative;
+    height: 10px;
     background: #1f2937;
-    border-radius: 10px;
+    border-radius: 999px;
     overflow: hidden;
-    margin-top: 0.6rem;
   }
 
   .meter-fill {
     height: 100%;
     width: 0%;
     background: #22c55e;
-    transition: width 0.1s;
+    transition: width 0.1s, background 0.2s;
   }
 
-  .control {
-    margin-top: 1rem;
-    text-align: left;
-  }
-
-  .control label {
-    display: block;
-    margin-bottom: 0.3rem;
-    font-size: 0.85rem;
-    color: #94a3b8;
+  .meter-limit {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #f87171;
   }
 </style>
 </head>
@@ -133,22 +150,27 @@
     <div class="time" id="time">15:00</div>
   </div>
 
-  <div class="status" id="status">Waiting for microphone…</div>
+  <div class="status" id="status">Ready</div>
 
-  <button id="start">Enable Microphone</button>
+  <div class="buttons">
+    <button id="start">Start</button>
+    <button id="pause" class="secondary">Pause</button>
+  </div>
 
   <div class="control">
-    <label for="duration">Duration (minutes)</label>
+    <label>Duration (minutes)</label>
     <input type="number" id="duration" value="15" min="1">
   </div>
 
   <div class="control">
-    <label for="threshold">Quiet threshold (lower = less sensitive)</label>
-    <input type="range" id="threshold" min="0.005" max="0.1" step="0.001" value="0.03">
-  </div>
-
-  <div class="meter">
-    <div class="meter-fill" id="meter"></div>
+    <label>Maximum noise level</label>
+    <div class="meter-wrapper">
+      <div class="meter">
+        <div class="meter-fill" id="meter"></div>
+        <div class="meter-limit" id="meterLimit"></div>
+      </div>
+      <input type="range" id="threshold" min="0" max="1" step="0.01" value="0.3">
+    </div>
   </div>
 </div>
 
@@ -159,19 +181,26 @@ let timeLeft = 900;
 let totalTime = 900;
 
 let running = false;
+let manuallyPaused = false;
+let started = false;
+
 let lastTick = null;
-
 let smoothedVolume = 0;
-
 let pauseUntil = 0;
+
 const MIN_PAUSE = 3000;
 
 const timeEl = document.getElementById("time");
 const statusEl = document.getElementById("status");
 const progressEl = document.getElementById("progress");
+
 const thresholdEl = document.getElementById("threshold");
 const durationEl = document.getElementById("duration");
+
 const meterEl = document.getElementById("meter");
+const meterLimit = document.getElementById("meterLimit");
+
+const startBtn = document.getElementById("start");
 
 const circumference = 2 * Math.PI * 90;
 
@@ -182,20 +211,16 @@ function formatTime(seconds) {
 }
 
 function updateCircle() {
-  const progress = timeLeft / totalTime;
-  progressEl.style.strokeDashoffset = circumference * (1 - progress);
+  progressEl.style.strokeDashoffset = circumference * (1 - timeLeft / totalTime);
 }
 
 function getVolume() {
   analyser.getFloatTimeDomainData(dataArray);
-
   let sum = 0;
   for (let i = 0; i < dataArray.length; i++) {
     sum += dataArray[i] * dataArray[i];
   }
-
   const rms = Math.sqrt(sum / dataArray.length);
-
   smoothedVolume = smoothedVolume * 0.9 + rms * 0.1;
   return smoothedVolume;
 }
@@ -204,15 +229,11 @@ function beep() {
   const ctx = new AudioContext();
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
-
   osc.connect(gain);
   gain.connect(ctx.destination);
-
   osc.frequency.value = 880;
   osc.start();
-
   gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 1);
-
   osc.stop(ctx.currentTime + 1);
 }
 
@@ -221,28 +242,32 @@ function tick(now) {
   const delta = (now - lastTick) / 1000;
   lastTick = now;
 
-  const volume = getVolume();
-  const threshold = parseFloat(thresholdEl.value);
-
-  // ✅ FIXED scaling (matches logic now)
-  const normalized = Math.min(volume / 0.1, 1);
-  meterEl.style.width = (normalized * 100) + "%";
-
-  const isQuiet = volume < threshold;
-
-  if (!isQuiet) {
-    pauseUntil = now + MIN_PAUSE;
+  if (!analyser) {
+    requestAnimationFrame(tick);
+    return;
   }
 
-  if (now >= pauseUntil && isQuiet) {
-    if (!running) {
-      running = true;
-      statusEl.textContent = "Running";
-      progressEl.style.stroke = "#22c55e";
-    }
+  const volume = getVolume();
+  const threshold = parseFloat(thresholdEl.value);
+  const normalized = Math.min(volume / 0.1, 1);
+
+  meterEl.style.width = (normalized * 100) + "%";
+  meterLimit.style.left = (threshold * 100) + "%";
+
+  meterEl.style.background = normalized < threshold ? "#22c55e" : "#ef4444";
+
+  const isQuiet = normalized < threshold;
+
+  if (!manuallyPaused) {
+    if (!isQuiet) pauseUntil = now + MIN_PAUSE;
+
+    running = (now >= pauseUntil && isQuiet);
+
+    statusEl.textContent = running ? "Running" : "Paused — waiting for quiet";
+    progressEl.style.stroke = running ? "#22c55e" : "#f59e0b";
   } else {
-    if (running) running = false;
-    statusEl.textContent = "Paused — waiting for quiet";
+    running = false;
+    statusEl.textContent = "Paused (manual)";
     progressEl.style.stroke = "#f59e0b";
   }
 
@@ -253,13 +278,11 @@ function tick(now) {
     timeEl.textContent = formatTime(timeLeft);
     updateCircle();
 
-    timeEl.style.transform = "scale(1.05)";
-    setTimeout(() => timeEl.style.transform = "scale(1)", 100);
-
     if (timeLeft === 0) {
       running = false;
       statusEl.textContent = "Finished";
       progressEl.style.stroke = "#3b82f6";
+      startBtn.textContent = "Restart";
       beep();
     }
   }
@@ -267,10 +290,12 @@ function tick(now) {
   requestAnimationFrame(tick);
 }
 
-document.getElementById("start").onclick = async () => {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+// Start / Restart
+startBtn.onclick = async () => {
+  manuallyPaused = false;
 
+  if (!audioContext) {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     audioContext = new AudioContext();
     const source = audioContext.createMediaStreamSource(stream);
 
@@ -279,20 +304,26 @@ document.getElementById("start").onclick = async () => {
     dataArray = new Float32Array(analyser.fftSize);
 
     source.connect(analyser);
-
-    totalTime = parseInt(durationEl.value, 10) * 60;
-    timeLeft = totalTime;
-
-    timeEl.textContent = formatTime(timeLeft);
-    updateCircle();
-
-    statusEl.textContent = "Listening…";
-
-    requestAnimationFrame(tick);
-
-  } catch (e) {
-    statusEl.textContent = "Microphone permission denied";
   }
+
+  totalTime = parseInt(durationEl.value, 10) * 60;
+  timeLeft = totalTime;
+
+  timeEl.textContent = formatTime(timeLeft);
+  updateCircle();
+
+  startBtn.textContent = "Restart";
+  statusEl.textContent = "Listening…";
+
+  if (!started) {
+    requestAnimationFrame(tick);
+    started = true;
+  }
+};
+
+// Pause
+document.getElementById("pause").onclick = () => {
+  manuallyPaused = true;
 };
 </script>
 
