@@ -6,7 +6,6 @@
 <title>Quiet Countdown</title>
 
 <style>
-/* (same styles as before, unchanged) */
 body {
   margin: 0;
   font-family: system-ui, sans-serif;
@@ -76,25 +75,51 @@ button.secondary {
   background: #374151;
 }
 
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.control {
+  margin-top: 1.2rem;
+  text-align: left;
+}
+
+.control label {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+input {
+  width: 100%;
+}
+
+.meter-wrapper {
+  position: relative;
+}
+
 .meter {
+  position: relative;
   height: 10px;
   background: #1f2937;
   border-radius: 999px;
   overflow: hidden;
-  margin-top: 1rem;
 }
 
 .meter-fill {
   height: 100%;
   width: 0%;
-  transition: width 0.1s;
+  transition: width 0.1s, background 0.2s;
 }
 
 .meter-limit {
   position: absolute;
+  top: 0;
+  bottom: 0;
   width: 2px;
-  background: red;
-  height: 10px;
+  background: #f87171;
 }
 </style>
 </head>
@@ -105,14 +130,18 @@ button.secondary {
 
   <div class="circle">
     <svg viewBox="0 0 200 200">
-      <circle cx="100" cy="100" r="90" stroke="#1f2937" stroke-width="10" fill="none"/>
+      <circle cx="100" cy="100" r="90"
+        stroke="#1f2937"
+        stroke-width="10"
+        fill="none"/>
       <circle id="progress"
         cx="100" cy="100" r="90"
         stroke="#22c55e"
         stroke-width="10"
         fill="none"
+        stroke-linecap="round"
         stroke-dasharray="565"
-        stroke-dashoffset="565"/>
+        stroke-dashoffset="0"/>
     </svg>
     <div class="time" id="time">15:00</div>
   </div>
@@ -121,18 +150,31 @@ button.secondary {
 
   <div class="buttons">
     <button id="main">Start</button>
-    <button id="restart" class="secondary">Restart</button>
+    <button id="reset" class="secondary" disabled>Reset</button>
   </div>
 
-  <input id="threshold" type="range" min="0" max="1" step="0.01" value="0.3">
+  <div class="control">
+    <label>Duration (minutes)</label>
+    <input type="number" id="duration" value="15" min="1">
+  </div>
 
-  <div class="meter">
-    <div class="meter-fill" id="meter"></div>
+  <div class="control">
+    <label>Maximum noise level</label>
+    <div class="meter-wrapper">
+      <div class="meter">
+        <div class="meter-fill" id="meter"></div>
+        <div class="meter-limit" id="meterLimit"></div>
+      </div>
+      <input id="threshold" type="range" min="0" max="1" step="0.01" value="0.3">
+    </div>
   </div>
 
 </div>
 
 <script>
+const MAX_VOLUME = 0.1;
+const circumference = 2 * Math.PI * 90;
+
 let audioContext, analyser, dataArray;
 
 let timeLeft = 900;
@@ -141,23 +183,49 @@ let totalTime = 900;
 let running = false;
 let manuallyPaused = false;
 let started = false;
+let isActive = false;
 
 let pauseUntil = 0;
 let lastTick = null;
+let smoothedVolume = 0;
 
 const mainBtn = document.getElementById("main");
-const restartBtn = document.getElementById("restart");
+const resetBtn = document.getElementById("reset");
 
 const timeEl = document.getElementById("time");
 const statusEl = document.getElementById("status");
 const meterEl = document.getElementById("meter");
+const meterLimit = document.getElementById("meterLimit");
+const progressEl = document.getElementById("progress");
 
 const thresholdEl = document.getElementById("threshold");
+const durationEl = document.getElementById("duration");
 
 function formatTime(s){
   const m = Math.floor(s/60);
   const sec = Math.floor(s%60);
   return `${m.toString().padStart(2,"0")}:${sec.toString().padStart(2,"0")}`;
+}
+
+function updateCircle() {
+  const progress = timeLeft / totalTime;
+  progressEl.style.strokeDashoffset =
+    circumference * (1 - progress);
+}
+
+function updateButtons() {
+  if (!isActive) {
+    mainBtn.textContent = "Start";
+    resetBtn.disabled = true;
+
+  } else if (manuallyPaused) {
+    mainBtn.textContent = "Resume";
+    resetBtn.disabled = false;
+
+  } else {
+    mainBtn.textContent = "Pause";
+    resetBtn.disabled = false;
+  }
 }
 
 function getVolume(){
@@ -166,7 +234,9 @@ function getVolume(){
   for(let i=0;i<dataArray.length;i++){
     sum+=dataArray[i]*dataArray[i];
   }
-  return Math.sqrt(sum/dataArray.length);
+  const rms = Math.sqrt(sum/dataArray.length);
+  smoothedVolume = smoothedVolume*0.9 + rms*0.1;
+  return smoothedVolume;
 }
 
 function tick(now){
@@ -174,31 +244,60 @@ function tick(now){
   const dt=(now-lastTick)/1000;
   lastTick=now;
 
+  if(!analyser){
+    requestAnimationFrame(tick);
+    return;
+  }
+
   const vol = getVolume();
-  const norm = Math.min(vol/0.1,1);
+  const norm = Math.min(vol / MAX_VOLUME, 1);
   const thr = parseFloat(thresholdEl.value);
 
   meterEl.style.width = (norm*100)+"%";
-  meterEl.style.background = norm < thr ? "green" : "red";
+  meterLimit.style.left = (thr*100)+"%";
+  meterEl.style.background = norm < thr ? "#22c55e" : "#ef4444";
 
-  if(!manuallyPaused){
-    if(norm >= thr) pauseUntil = now + 3000;
+  const isQuiet = norm < thr;
 
-    running = (now >= pauseUntil && norm < thr);
-    statusEl.textContent = running ? "Running" : "Paused — waiting for quiet";
+  if (!isActive) {
+    running = false;
+    statusEl.textContent = "Ready";
+    progressEl.style.stroke = "#22c55e";
+
+  } else if (manuallyPaused) {
+    running = false;
+    statusEl.textContent = "Paused";
+    progressEl.style.stroke = "#f59e0b";
+
+  } else {
+    if (!isQuiet) pauseUntil = now + 3000;
+    running = (now >= pauseUntil && isQuiet);
+
+    if (running) {
+      statusEl.textContent = "Running";
+      progressEl.style.stroke = "#22c55e";
+    } else {
+      statusEl.textContent = "Waiting for quiet";
+      progressEl.style.stroke = "#f59e0b";
+    }
   }
 
   if(running){
     timeLeft -= dt;
     if(timeLeft<0) timeLeft=0;
+
     timeEl.textContent = formatTime(timeLeft);
+    updateCircle();
 
     if(timeLeft===0){
       running=false;
+      isActive=false;
       statusEl.textContent="Finished";
+      progressEl.style.stroke="#3b82f6";
     }
   }
 
+  updateButtons();
   requestAnimationFrame(tick);
 }
 
@@ -219,21 +318,42 @@ mainBtn.onclick = async () => {
     started = true;
   }
 
-  if(running){
+  if (!isActive) {
+    isActive = true;
+    manuallyPaused = false;
+
+    totalTime = parseInt(durationEl.value, 10) * 60;
+    timeLeft = totalTime;
+
+    timeEl.textContent = formatTime(timeLeft);
+    updateCircle();
+
+  } else if (!manuallyPaused) {
     manuallyPaused = true;
-    running = false;
-    mainBtn.textContent = "Resume";
   } else {
     manuallyPaused = false;
-    mainBtn.textContent = "Pause";
   }
+
+  updateButtons();
 };
 
-restartBtn.onclick = () => {
-  timeLeft = totalTime;
-  timeEl.textContent = formatTime(timeLeft);
+resetBtn.onclick = () => {
+  isActive = false;
   manuallyPaused = false;
-  mainBtn.textContent = "Pause";
+  running = false;
+
+  totalTime = parseInt(durationEl.value, 10) * 60;
+  timeLeft = totalTime;
+
+  timeEl.textContent = formatTime(timeLeft);
+  updateCircle();
+
+  statusEl.textContent = "Ready";
+  progressEl.style.stroke = "#22c55e";
+
+  meterEl.style.width = "0%";
+
+  updateButtons();
 };
 </script>
 
