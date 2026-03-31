@@ -24,17 +24,26 @@ body {
 
   display: flex;
   justify-content: center;
-  align-items: flex-start;
+  align-items: center;
 
+  min-height: 100vh;
+
+  /* 👇 subtle upward bias */
   padding: 2vh 1rem 1rem;
+
   font-size: clamp(16px, 1.2vw, 18px);
 }
 
 .card {
   width: min(92vw, 600px);
+  max-width: 100%;
+  max-height: 95vh;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+
   padding: clamp(1.5rem, 3vw, 2.5rem);
-  padding-top: clamp(1rem, 2vw, 1.5rem);
-  padding-bottom: clamp(2rem, 3vw, 3rem);
   border-radius: 24px;
   text-align: center;
   background: #111827;
@@ -42,9 +51,9 @@ body {
 
 .circle {
   position: relative;
-  width: min(70vw, 420px);
-  height: min(70vw, 420px);
-  margin: 0.5rem auto 1.5rem;
+  width: min(65vw, 380px);
+  height: min(65vw, 380px);
+  margin: 0.3rem auto 1rem;
 }
 
 svg {
@@ -158,10 +167,40 @@ input[type="range"]::-webkit-slider-runnable-track {
   }
 }
 
+/* Mobile tweaks */
 @media (max-width: 600px) {
-  .time { font-size: 12vw; }
-  button { font-size: 1.3rem; }
-  .control label { font-size: 1rem; }
+
+  .circle {
+    width: 65vw;
+    height: 65vw;
+  }
+
+  .time {
+    font-size: 11vw;
+  }
+
+  .buttons {
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  button {
+    width: 100%;
+    font-size: 1.2rem;
+    padding: 0.9rem;
+  }
+
+  .control {
+    margin-top: 0.8rem;
+  }
+
+  .control label {
+    font-size: 0.95rem;
+  }
+
+  .meter {
+    height: 8px;
+  }
 }
 </style>
 </head>
