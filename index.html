@@ -23,10 +23,6 @@ body {
   border-radius: 24px;
   text-align: center;
   background: linear-gradient(145deg, #111827, #0b1220);
-  border: 1px solid rgba(255,255,255,0.05);
-  box-shadow:
-    0 20px 50px rgba(0,0,0,0.6),
-    inset 0 1px 0 rgba(255,255,255,0.03);
 }
 
 .circle {
@@ -36,11 +32,7 @@ body {
   margin: 2rem auto;
 }
 
-svg {
-  width: 100%;
-  height: 100%;
-  transform: rotate(-90deg);
-}
+svg { width: 100%; height: 100%; transform: rotate(-90deg); }
 
 .time {
   position: absolute;
@@ -51,10 +43,7 @@ svg {
   font-weight: bold;
 }
 
-.status {
-  margin-top: 1rem;
-  color: #94a3b8;
-}
+.status { margin-top: 1rem; color: #94a3b8; }
 
 .buttons {
   display: flex;
@@ -73,95 +62,23 @@ button {
   touch-action: manipulation;
 }
 
-button.secondary {
-  background: #374151;
-}
+button.secondary { background: #374151; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
 
-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+.control { margin-top: 1.2rem; text-align: left; }
+.control label { font-size: 0.85rem; color: #94a3b8; }
 
-.control {
-  margin-top: 1.2rem;
-  text-align: left;
-}
+input { width: 100%; }
 
-.control label {
-  display: block;
-  margin-bottom: 0.4rem;
-  font-size: 0.85rem;
-  color: #94a3b8;
-}
+.meter { height: 10px; background: #1f2937; border-radius: 999px; overflow: hidden; }
+.meter-fill { height: 100%; width: 0%; transition: 0.1s; }
+.meter-limit { position: absolute; width: 2px; background: red; top:0; bottom:0; }
 
-input {
-  width: 100%;
-}
-
-.meter-wrapper {
-  position: relative;
-}
-
-.meter {
-  position: relative;
-  height: 10px;
-  background: #1f2937;
-  border-radius: 999px;
-  overflow: hidden;
-}
-
-.meter-fill {
-  height: 100%;
-  width: 0%;
-  transition: width 0.1s, background 0.2s;
-}
-
-.meter-limit {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: #f87171;
-}
-
-/* 📱 Mobile improvements */
 @media (max-width: 600px) {
-  body {
-    padding: 1rem;
-    height: auto;
-    min-height: 100vh;
-    align-items: start;
-  }
-
-  .card {
-    width: 100%;
-    padding: 1.5rem 1rem;
-    border-radius: 16px;
-  }
-
-  .circle {
-    width: 80vw;
-    height: 80vw;
-    margin: 1.5rem auto;
-  }
-
-  .time {
-    font-size: 12vw;
-  }
-
-  .buttons {
-    flex-direction: column;
-  }
-
-  button {
-    width: 100%;
-    padding: 1rem;
-    font-size: 1rem;
-  }
-
-  .control {
-    margin-top: 1rem;
-  }
+  .circle { width: 80vw; height: 80vw; }
+  .time { font-size: 12vw; }
+  .buttons { flex-direction: column; }
+  button { width: 100%; padding: 1rem; }
 }
 </style>
 </head>
@@ -170,103 +87,83 @@ input {
 
 <div class="card">
 
-  <div class="circle">
-    <svg viewBox="0 0 200 200">
-      <circle cx="100" cy="100" r="90"
-        stroke="#1f2937"
-        stroke-width="10"
-        fill="none"/>
-      <circle id="progress"
-        cx="100" cy="100" r="90"
-        stroke="#22c55e"
-        stroke-width="10"
-        fill="none"
-        stroke-linecap="round"
-        stroke-dasharray="565"
-        stroke-dashoffset="0"/>
-    </svg>
-    <div class="time" id="time">15:00</div>
-  </div>
+<div class="circle">
+<svg viewBox="0 0 200 200">
+<circle cx="100" cy="100" r="90" stroke="#1f2937" stroke-width="10" fill="none"/>
+<circle id="progress" cx="100" cy="100" r="90"
+stroke="#22c55e" stroke-width="10" fill="none"
+stroke-dasharray="565" stroke-dashoffset="0"/>
+</svg>
+<div class="time" id="time">15:00</div>
+</div>
 
-  <div class="status" id="status">Ready</div>
+<div class="status" id="status">Ready</div>
 
-  <div class="buttons">
-    <button id="main">Start</button>
-    <button id="reset" class="secondary" disabled>Reset</button>
-  </div>
+<div class="buttons">
+<button id="main">Start</button>
+<button id="reset" class="secondary" disabled>Reset</button>
+</div>
 
-  <div class="control">
-    <label>Duration (minutes)</label>
-    <input type="number" id="duration" value="15" min="1">
-  </div>
+<div class="control">
+<label>Duration (minutes)</label>
+<input type="number" id="duration" value="15">
+</div>
 
-  <div class="control">
-    <label>Maximum noise level</label>
-    <div class="meter-wrapper">
-      <div class="meter">
-        <div class="meter-fill" id="meter"></div>
-        <div class="meter-limit" id="meterLimit"></div>
-      </div>
-      <input id="threshold" type="range" min="0" max="1" step="0.01" value="0.3">
-    </div>
-  </div>
+<div class="control">
+<label>Maximum noise level</label>
+<div class="meter">
+<div id="meter" class="meter-fill"></div>
+<div id="meterLimit" class="meter-limit"></div>
+</div>
+<input id="threshold" type="range" min="0" max="1" step="0.01" value="0.3">
+</div>
 
 </div>
 
 <script>
 const MAX_VOLUME = 0.1;
-const circumference = 2 * Math.PI * 90;
+const circumference = 2*Math.PI*90;
 
 let audioContext, analyser, dataArray;
 
-let timeLeft = 900;
-let totalTime = 900;
+let timeLeft=900,totalTime=900;
+let running=false, manuallyPaused=false, started=false, isActive=false;
 
-let running = false;
-let manuallyPaused = false;
-let started = false;
-let isActive = false;
+let pauseUntil=0,lastTick=null, smoothedVolume=0;
 
-let pauseUntil = 0;
-let lastTick = null;
-let smoothedVolume = 0;
+const mainBtn=document.getElementById("main");
+const resetBtn=document.getElementById("reset");
 
-const mainBtn = document.getElementById("main");
-const resetBtn = document.getElementById("reset");
+const timeEl=document.getElementById("time");
+const statusEl=document.getElementById("status");
+const meterEl=document.getElementById("meter");
+const meterLimit=document.getElementById("meterLimit");
+const progressEl=document.getElementById("progress");
 
-const timeEl = document.getElementById("time");
-const statusEl = document.getElementById("status");
-const meterEl = document.getElementById("meter");
-const meterLimit = document.getElementById("meterLimit");
-const progressEl = document.getElementById("progress");
-
-const thresholdEl = document.getElementById("threshold");
-const durationEl = document.getElementById("duration");
+const thresholdEl=document.getElementById("threshold");
+const durationEl=document.getElementById("duration");
 
 function formatTime(s){
-  const m = Math.floor(s/60);
-  const sec = Math.floor(s%60);
+  const m=Math.floor(s/60);
+  const sec=Math.floor(s%60);
   return `${m.toString().padStart(2,"0")}:${sec.toString().padStart(2,"0")}`;
 }
 
-function updateCircle() {
-  const progress = timeLeft / totalTime;
+function updateCircle(){
   progressEl.style.strokeDashoffset =
-    circumference * (1 - progress);
+    circumference*(1-timeLeft/totalTime);
 }
 
-function updateButtons() {
-  if (!isActive) {
-    mainBtn.textContent = "Start";
-    resetBtn.disabled = true;
-
-  } else if (manuallyPaused) {
-    mainBtn.textContent = "Resume";
-    resetBtn.disabled = false;
-
+function updateButtons(){
+  if(!isActive){
+    mainBtn.textContent="Start";
+    resetBtn.disabled=true;
+  } else if(manuallyPaused){
+    mainBtn.textContent="Resume";
+    resetBtn.disabled=false;
   } else {
-    mainBtn.textContent = "Pause";
-    resetBtn.disabled = false;
+    mainBtn.textContent="Pause";
+    resetBtn.disabled=false;
   }
 }
 
@@ -276,8 +173,8 @@ function getVolume(){
   for(let i=0;i<dataArray.length;i++){
     sum+=dataArray[i]*dataArray[i];
   }
-  const rms = Math.sqrt(sum/dataArray.length);
-  smoothedVolume = smoothedVolume*0.9 + rms*0.1;
+  const rms=Math.sqrt(sum/dataArray.length)*1.5; // boosted
+  smoothedVolume=smoothedVolume*0.9 + rms*0.1;
   return smoothedVolume;
 }
 
@@ -286,115 +183,99 @@ function tick(now){
   const dt=(now-lastTick)/1000;
   lastTick=now;
 
-  if(!analyser){
-    requestAnimationFrame(tick);
-    return;
-  }
+  if(!analyser){ requestAnimationFrame(tick); return; }
 
-  const vol = getVolume();
-  const norm = Math.min(vol / MAX_VOLUME, 1);
-  const thr = parseFloat(thresholdEl.value);
+  const vol=getVolume();
+  const norm=Math.min(vol/MAX_VOLUME,1);
+  const thr=parseFloat(thresholdEl.value);
 
-  meterEl.style.width = (norm*100)+"%";
-  meterLimit.style.left = (thr*100)+"%";
-  meterEl.style.background = norm < thr ? "#22c55e" : "#ef4444";
+  meterEl.style.width=(norm*100)+"%";
+  meterLimit.style.left=(thr*100)+"%";
+  meterEl.style.background=norm<thr?"#22c55e":"#ef4444";
 
-  const isQuiet = norm < thr;
+  const isQuiet=norm<thr;
 
-  if (!isActive) {
-    running = false;
-    statusEl.textContent = "Ready";
-    progressEl.style.stroke = "#22c55e";
+  if(!isActive){
+    running=false;
+    statusEl.textContent="Ready";
 
-  } else if (manuallyPaused) {
-    running = false;
-    statusEl.textContent = "Paused";
-    progressEl.style.stroke = "#f59e0b";
+  } else if(manuallyPaused){
+    running=false;
+    statusEl.textContent="Paused";
 
   } else {
-    if (!isQuiet) pauseUntil = now + 3000;
-    running = (now >= pauseUntil && isQuiet);
-
-    if (running) {
-      statusEl.textContent = "Running";
-      progressEl.style.stroke = "#22c55e";
-    } else {
-      statusEl.textContent = "Waiting for quiet";
-      progressEl.style.stroke = "#f59e0b";
-    }
+    if(!isQuiet) pauseUntil=now+3000;
+    running=(now>=pauseUntil && isQuiet);
+    statusEl.textContent=running?"Running":"Waiting for quiet";
   }
 
   if(running){
-    timeLeft -= dt;
+    timeLeft-=dt;
     if(timeLeft<0) timeLeft=0;
-
-    timeEl.textContent = formatTime(timeLeft);
+    timeEl.textContent=formatTime(timeLeft);
     updateCircle();
-
-    if(timeLeft===0){
-      running=false;
-      isActive=false;
-      statusEl.textContent="Finished";
-      progressEl.style.stroke="#3b82f6";
-    }
   }
 
   updateButtons();
   requestAnimationFrame(tick);
 }
 
-mainBtn.onclick = async () => {
+mainBtn.onclick=async ()=>{
 
   if(!started){
-    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
-    audioContext = new AudioContext();
-    const src = audioContext.createMediaStreamSource(stream);
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
 
-    analyser = audioContext.createAnalyser();
-    analyser.fftSize = 2048;
-    dataArray = new Float32Array(analyser.fftSize);
+    audioContext=new AudioContext();
 
-    src.connect(analyser);
+    const src=audioContext.createMediaStreamSource(stream);
+
+    // 🔥 FIX: GainNode
+    const gain=audioContext.createGain();
+    gain.gain.value=1;
+
+    analyser=audioContext.createAnalyser();
+    analyser.fftSize=2048;
+
+    analyser.minDecibels = -90;
+    analyser.maxDecibels = -10;
+    analyser.smoothingTimeConstant = 0.8;
+
+    dataArray=new Float32Array(analyser.fftSize);
+
+    src.connect(gain);
+    gain.connect(analyser);
 
     requestAnimationFrame(tick);
-    started = true;
+    started=true;
   }
 
-  if (!isActive) {
-    isActive = true;
-    manuallyPaused = false;
-
-    totalTime = parseInt(durationEl.value, 10) * 60;
-    timeLeft = totalTime;
-
-    timeEl.textContent = formatTime(timeLeft);
+  if(!isActive){
+    isActive=true;
+    manuallyPaused=false;
+    totalTime=parseInt(durationEl.value)*60;
+    timeLeft=totalTime;
+    timeEl.textContent=formatTime(timeLeft);
     updateCircle();
 
-  } else if (!manuallyPaused) {
-    manuallyPaused = true;
+  } else if(!manuallyPaused){
+    manuallyPaused=true;
   } else {
-    manuallyPaused = false;
+    manuallyPaused=false;
   }
 
   updateButtons();
 };
 
-resetBtn.onclick = () => {
-  isActive = false;
-  manuallyPaused = false;
-  running = false;
-
-  totalTime = parseInt(durationEl.value, 10) * 60;
-  timeLeft = totalTime;
-
-  timeEl.textContent = formatTime(timeLeft);
+resetBtn.onclick=()=>{
+  isActive=false;
+  manuallyPaused=false;
+  running=false;
+  totalTime=parseInt(durationEl.value)*60;
+  timeLeft=totalTime;
+  timeEl.textContent=formatTime(timeLeft);
   updateCircle();
-
-  statusEl.textContent = "Ready";
-  progressEl.style.stroke = "#22c55e";
-
-  meterEl.style.width = "0%";
-
+  statusEl.textContent="Ready";
+  meterEl.style.width="0%";
   updateButtons();
 };
 </script>
